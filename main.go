@@ -88,7 +88,8 @@ func work (wgt *sync.WaitGroup) {
 		logger.Info(color.GreenString("Establishing connection with Ethereum client..."))
 		client, err := ethclient.Dial(rpcURL)
 		if err != nil {
-			logger.Fatalf("Failed to connect to the Ethereum client: %v", err)
+			logger.Errorf("Failed to connect to the Ethereum client: %v", err)
+			return 
 		}
 		logger.Info(color.GreenString("Successfully connected to Ethereum client."))
 		logger.Info(color.GreenString("adasa"))
@@ -97,43 +98,50 @@ func work (wgt *sync.WaitGroup) {
 		}
 		privateKeyECDSA, err := crypto.HexToECDSA(privateKey)
 		if err != nil {
-			logger.Fatalf("Error in parsing private key: %v", err)
+			 logger.Errorf("Error in parsing private key: %v", err)
+			 return
 		}
 	
 		chainID, err := client.NetworkID(context.Background())
 		if err != nil {
-			logger.Fatalf("Failed to get chainID: %v", err)
+			 logger.Errorf("Failed to get chainID: %v", err)
+			 return
 		}
 		logger.Infof(color.GreenString("Successfully connected to Ethereum network with Chain ID: %v"), chainID)
 	
 		auth, err := bind.NewKeyedTransactorWithChainID(privateKeyECDSA, chainID)
 		if err != nil {
-			logger.Fatalf("Failed to create transactor: %v", err)
+			 logger.Errorf("Failed to create transactor: %v", err)
+			 return
 		}
 	
 		referralAddr := common.HexToAddress(referralAddress)
 		contractAddr := common.HexToAddress(contractAddress)
 		contract, err := abi.NewRobotToken(contractAddr, client)
 		if err != nil {
-			logger.Fatalf("Failed to instantiate a Token contract: %v", err)
+			 logger.Errorf("Failed to instantiate a Token contract: %v", err)
+			 return
 		}
 		logger.Info(color.GreenString("RobotToken contract successfully instantiated."))
 	
 		contractName, err := contract.Name(nil)
 		if err != nil {
-			logger.Fatalf("Failed to get contract name: %v", err)
+			 logger.Errorf("Failed to get contract name: %v", err)
+			 return
 		}
 		logger.Infof(color.GreenString("Contract Name: %s"), color.RedString(contractName))
 	
 		challenge, err := contract.Challenge(nil)
 		if err != nil {
-			logger.Fatalf("Failed to get challenge: %v", err)
+			 logger.Errorf("Failed to get challenge: %v", err)
+			 return
 		}
 		logger.Infof(color.GreenString("Current mining challenge number: %d"), challenge)
 	
 		difficulty, err := contract.Difficulty(nil)
 		if err != nil {
-			logger.Fatalf("Failed to get difficulty: %v", err)
+			 logger.Errorf("Failed to get difficulty: %v", err)
+			 return
 		}
 		logger.Infof(color.GreenString("Current mining difficulty level: %d"), difficulty)
 	
@@ -181,18 +189,21 @@ func work (wgt *sync.WaitGroup) {
 			logger.Info(color.YellowString("Submitting mining transaction with nonce..."))
 			tx, err := contract.Mine(auth, nonce, referralAddr)
 			if err != nil {
-				logger.Fatalf("Failed to submit mine transaction: %v", err)
+				 logger.Errorf("Failed to submit mine transaction: %v", err)
+				 return
 			}
 			receipt, err := bind.WaitMined(context.Background(), client, tx)
 			if err != nil {
-				logger.Fatalf("Failed to mine the transaction: %v", err)
+				 logger.Errorf("Failed to mine the transaction: %v", err)
+				 return
 			}
 			logger.Infof(color.GreenString("Mining transaction successfully confirmed, Transaction Hash: %s"), color.CyanString(receipt.TxHash.Hex()))
 	
 		case err := <-errorChan:
 			cancel()
 			wg.Wait()
-			logger.Fatalf("Mining operation failed due to an error: %v", err)
+			 logger.Errorf("Mining operation failed due to an error: %v", err)
+			 return
 		}
 
 }
