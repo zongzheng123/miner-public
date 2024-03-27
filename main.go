@@ -200,7 +200,7 @@ func work (wgt *sync.WaitGroup) {
 func main() {
 	for i := 0; i < 1000; i++  {
 		var wgt sync.WaitGroup
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 5; i++ {
 		wgt.Add(1)
 		go work(&wgt)
 	}
