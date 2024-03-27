@@ -107,8 +107,7 @@ func mineWorker(ctx context.Context, wg *sync.WaitGroup, fromAddress common.Addr
 // 	}
 // }
 
-func work (wgt *sync.WaitGroup) {
-	defer wgt.Done()
+func work () {
 	banner := `
 	// 0xRobot.AI golang miner
 		`
@@ -271,7 +270,7 @@ func main () {
 		 wg.Add(1)
 		 go func() {
 			 defer wg.Done() // 完成后标记Done
-			 work(&wg)
+			 work()
 			 <-pool // 释放槽位
 			 logger.Info(color.GreenString("Mining process successfully completed"))
 		 }()
