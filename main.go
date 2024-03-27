@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"sync"
 	"time"
-	"runtime"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,12 +31,11 @@ var (
 )
 
 func init() {
-	workerCount := runtime.NumCPU()
 	flag.StringVar(&rpcURL, "rpcURL", "https://babel-api.mainnet.iotex.io", "URL for chain rpc")
 	flag.StringVar(&privateKey, "privateKey", "", "Private key for the Ethereum account")
 	flag.StringVar(&referralAddress, "referralAddress", "0x9f593f190cdF2207148a2bA6aB617F010387BCa2", "Address of the RobotToken contract")
 	flag.StringVar(&contractAddress, "contractAddress", "0xe5F8dBf17c9eC8eb327D191dBA74e36970877587", "Address of the RobotToken contract")
-	flag.IntVar(&workerCount, "workerCount", workerCount, "Number of concurrent mining workers")
+	flag.IntVar(&workerCount, "workerCount", 10, "Number of concurrent mining workers")
 
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
