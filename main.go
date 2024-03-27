@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
+	// "crypto/rand"
+	"math/rand"
 	"flag"
 	"fmt"
 	"math/big"
@@ -42,27 +43,67 @@ func init() {
 	})
 }
 
+// func mineWorker(ctx context.Context, wg *sync.WaitGroup, fromAddress common.Address, resultChan chan<- *big.Int, errorChan chan<- error, challenge *big.Int, target *big.Int, hashCountChan chan<- int) {
+// 	defer wg.Done()
+
+// 	var nonce *big.Int
+// 	var err error
+
+// 	for {
+// 		select {
+// 		case <-ctx.Done():
+// 			return
+// 		default:
+// 			nonce, err = rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 256))
+// 			if err != nil {
+// 				errorChan <- fmt.Errorf("failed to generate random nonce: %v", err)
+// 				return
+// 			}
+
+// 			noncePadded := common.LeftPadBytes(nonce.Bytes(), 32)
+// 			challengePadded := common.LeftPadBytes(challenge.Bytes(), 32)
+// 			addressBytes := fromAddress.Bytes()
+// 			data := append(challengePadded, append(addressBytes, noncePadded...)...)
+// 			hash := crypto.Keccak256Hash(data)
+// 			if hash.Big().Cmp(target) == -1 {
+// 				resultChan <- nonce
+// 				return
+// 			}
+// 			hashCountChan <- 1
+// 		}
+// 	}
+// }
+
 func mineWorker(ctx context.Context, wg *sync.WaitGroup, fromAddress common.Address, resultChan chan<- *big.Int, errorChan chan<- error, challenge *big.Int, target *big.Int, hashCountChan chan<- int) {
 	defer wg.Done()
 
-	var nonce *big.Int
-	var err error
+	// 使用时间作为种子初始化伪随机数生成器
+	source := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(source)
 
+	data := make([]byte, 32+32+20) // challenge(32 bytes) + nonce(32 bytes) + address(20 bytes)
+	copy(data[32:64], common.LeftPadBytes(challenge.Bytes(), 32))
+	copy(data[64:], fromAddress.Bytes())
+
+	var nonce *big.Int
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			nonce, err = rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 256))
+			// 使用math/rand生成随机数
+			nonceBytes := make([]byte, 32)
+			_, err := r.Read(nonceBytes)
 			if err != nil {
 				errorChan <- fmt.Errorf("failed to generate random nonce: %v", err)
 				return
 			}
+			nonce = new(big.Int).SetBytes(nonceBytes)
 
-			noncePadded := common.LeftPadBytes(nonce.Bytes(), 32)
-			challengePadded := common.LeftPadBytes(challenge.Bytes(), 32)
-			addressBytes := fromAddress.Bytes()
-			data := append(challengePadded, append(addressBytes, noncePadded...)...)
+			// 更新data切片中的nonce部分
+			copy(data[:32], nonceBytes)
+
+			// 计算哈希
 			hash := crypto.Keccak256Hash(data)
 			if hash.Big().Cmp(target) == -1 {
 				resultChan <- nonce
@@ -110,6 +151,7 @@ func work (wgt *sync.WaitGroup) {
 		logger.Infof(color.GreenString("Successfully connected to Ethereum network with Chain ID: %v"), chainID)
 	
 		auth, err := bind.NewKeyedTransactorWithChainID(privateKeyECDSA, chainID)
+		auth.GasPrice = big.NewInt(1000000000000)
 		if err != nil {
 			 logger.Errorf("Failed to create transactor: %v", err)
 			 return
@@ -211,7 +253,7 @@ func work (wgt *sync.WaitGroup) {
 func main() {
 	for i := 0; i < 1000; i++  {
 		var wgt sync.WaitGroup
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 1; i++ {
 		wgt.Add(1)
 		go work(&wgt)
 	}
