@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	// "crypto/rand"
-	"math/rand"
+	"crypto/rand"
 	"flag"
 	"fmt"
 	"math/big"
@@ -77,31 +76,25 @@ func init() {
 func mineWorker(ctx context.Context, wg *sync.WaitGroup, fromAddress common.Address, resultChan chan<- *big.Int, errorChan chan<- error, challenge *big.Int, target *big.Int, hashCountChan chan<- int) {
 	defer wg.Done()
 
-	// 使用时间作为种子初始化伪随机数生成器
-	source := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(source)
-
+	// 预分配data切片以减少内存分配
 	data := make([]byte, 32+32+20) // challenge(32 bytes) + nonce(32 bytes) + address(20 bytes)
 	copy(data[32:64], common.LeftPadBytes(challenge.Bytes(), 32))
 	copy(data[64:], fromAddress.Bytes())
 
-	var nonce *big.Int
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			// 使用math/rand生成随机数
-			nonceBytes := make([]byte, 32)
-			_, err := r.Read(nonceBytes)
+			// 生成随机数
+			nonce, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 256))
 			if err != nil {
 				errorChan <- fmt.Errorf("failed to generate random nonce: %v", err)
 				return
 			}
-			nonce = new(big.Int).SetBytes(nonceBytes)
 
 			// 更新data切片中的nonce部分
-			copy(data[:32], nonceBytes)
+			copy(data[:32], common.LeftPadBytes(nonce.Bytes(), 32))
 
 			// 计算哈希
 			hash := crypto.Keccak256Hash(data)
@@ -253,7 +246,7 @@ func work (wgt *sync.WaitGroup) {
 func main() {
 	for i := 0; i < 1000; i++  {
 		var wgt sync.WaitGroup
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 3; i++ {
 		wgt.Add(1)
 		go work(&wgt)
 	}
