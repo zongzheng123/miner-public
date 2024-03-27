@@ -258,7 +258,7 @@ func work (wgt *sync.WaitGroup) {
 
 func main () {
 	 // 创建一个容量为3的缓冲channel，用于控制并发数
-	 pool := make(chan struct{}, 3)
+	 pool := make(chan struct{}, 5)
 
 	 // 创建一个WaitGroup来等待所有的work完成
 	 var wg sync.WaitGroup
